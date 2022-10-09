@@ -96,7 +96,45 @@ public:
     std::cout << "training done !" << std::endl;
   }
 
-  void predict(OCTET *img, int nH, int nW) {
+  void predict_class1_test() {
+    std::vector<int> classes_vec;
+    for (size_t i = 0; i < class1.size(); ++i) {
+	classes_vec.push_back(predict(class1[i], nH, nW));
+    }
+    int nb_correct = 0;
+    for (size_t i = 0; i < classes_vec.size(); ++i) {
+	if(classes_vec[i] == 0)
+	    nb_correct++;
+    }
+    
+    int nb_incorrect = classes_vec.size() - nb_correct;
+    
+    
+    std::cout<<"Number of misclassed elements: "<<nb_incorrect<<std::endl;
+    std::cout<<"Number of correctly classed elements: "<<nb_correct<<std::endl;
+    
+  }
+  
+    void predict_class2_test() {
+    std::vector<int> classes_vec;
+    for (size_t i = 0; i < class2.size(); ++i) {
+	classes_vec.push_back(predict(class2[i], nH, nW));
+    }
+    int nb_correct = 0;
+    for (size_t i = 0; i < classes_vec.size(); ++i) {
+	if(classes_vec[i] == 1)
+	    nb_correct++;
+    }
+    
+    int nb_incorrect = classes_vec.size() - nb_correct;
+    
+    
+    std::cout<<"Number of misclassed elements: "<<nb_incorrect<<std::endl;
+    std::cout<<"Number of correctly classed elements: "<<nb_correct<<std::endl;
+    
+  }
+
+  int  predict(OCTET *img, int nH, int nW) {
     std::vector<OCTET *> holder;
     holder.push_back(img);
 
@@ -122,17 +160,19 @@ public:
     for (size_t idx = 0; idx < ((nH / (n * 2)) * (nW / (n * 2))); idx++) {
       /*score_class1 +=
           vector_image[idx] * log10(vector_image[idx] / vect_class1[idx]);*/
-	  score_class1 += sqrt(vector_image[idx]*vect_class1[idx]);
+      score_class1 += sqrt(vector_image[idx] * vect_class1[idx]);
     }
 
     for (size_t idx = 0; idx < ((nH / (n * 2)) * (nW / (n * 2))); idx++) {
       /*score_class2 +=
           vector_image[idx] * log10(vector_image[idx] / vect_class2[idx]);*/
-	score_class2 += sqrt(vector_image[idx]*vect_class2[idx]);
+      score_class2 += sqrt(vector_image[idx] * vect_class2[idx]);
     }
 
     std::cout << "Score with class 1: " << score_class1 << std::endl;
     std::cout << "Score with class 2: " << score_class2 << std::endl;
+    
+    return score_class1 > score_class2 ? 0 : 1;
   }
 };
 

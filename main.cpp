@@ -134,6 +134,8 @@ int main(int argc, char *argv[]) {
   lire_image_pgm(image_to_predict, ImgIn, taille);
 
   cnn.predict(ImgIn, nH, nW);
+  
+  cnn.predict_class2_test();
 
   free(ImgIn);
   return EXIT_SUCCESS;
