@@ -3,11 +3,11 @@
 
 #include "image_ppm.h"
 #include <vector>
+#include <iostream>
 
 void relu(OCTET *ImgIn, int nH, int nW);
 void convolution(OCTET *ImgIn, const std::vector<float> &filtre, OCTET *ImgOut,
                  unsigned int step, int nH, int nW);
-
 
 class LayerConvPool { // Layer convolution + relu + pooling
 
@@ -41,9 +41,9 @@ public:
 
     for (size_t i = 0; i < filtres.size(); i++) {
       for (size_t j = 0; j < input.size(); j++) {
-        convolution(input[j], filtres[i], filtered_input[filtered_input_idx++],
+        convolution(input[j], filtres[i], filtered_input[filtered_input_idx],
                     1, nH, nW);
-        relu(filtered_input[i + j], nH, nW);
+        relu(filtered_input[filtered_input_idx++], nH, nW);
       }
     }
   }
@@ -87,6 +87,5 @@ public:
 
   void set_input(std::vector<OCTET *> input) { this->input = input; }
 };
-
 
 #endif

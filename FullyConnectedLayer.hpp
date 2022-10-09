@@ -2,12 +2,15 @@
 #define __FULLYCONNECTEDLAYER_HPP__
 
 #include "image_ppm.h"
+#include <iostream>
 #include <vector>
+
+void softmax(double *vec, size_t size);
 
 class FullyConnectedLayer {
 private:
   std::vector<OCTET *> input;
-  double* vect;
+  double *vect;
   OCTET *vectorized_input;
   int nH, nW;
 
@@ -20,25 +23,27 @@ public:
     this->nW = nW;
   }
 
-  void vectorise(char * vectorName) {
+  void vectorise(char *vectorName) {
     size_t size = nH * nW;
+    std::cout<<"size of vector: "<<size<<std::endl;
     allocation_tableau(vectorized_input, OCTET, size);
     allocation_tableau(vect, double, size);
-    printf("nH=%d; nW=%d\n", nH, nW);
-    printf("input size = %d\n", input.size());
 
     for (size_t i = 0; i < input.size(); ++i) {
       for (size_t j = 0; j < size; ++j) {
-        vect[j] += (double)input[i][j] /(double) input.size();
+        vect[j] += (double)input[i][j] / (double)input.size();
       }
     }
-    
+
     for (size_t j = 0; j < size; ++j) {
-        vectorized_input[j]=vect[j];
-      }
-    
-    ecrire_image_pgm(vectorName,vectorized_input, nH, nW);
+      vectorized_input[j] = vect[j];
+    }
+
+    ecrire_image_pgm(vectorName, vectorized_input, nH, nW);
+    softmax(vect,size);
   }
+  
+  double* get_vector() const {return vect;}
 };
 
 #endif

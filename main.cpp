@@ -1,5 +1,6 @@
 #include "image_ppm.h"
 #include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <iostream>
 #include <stddef.h>
@@ -12,6 +13,17 @@
 #include "CNN.hpp"
 
 using namespace std;
+
+void softmax(double *vec, size_t size) {
+  double exp_sum = 0;
+  for (size_t i = 0; i < size; ++i) {
+    exp_sum += exp(vec[i]);
+  }
+
+  for (size_t i = 0; i < size; ++i) {
+    vec[i] = exp(vec[i]) / exp_sum;
+  }
+}
 
 void relu(OCTET *ImgIn, int nH, int nW) {
   size_t taille = nH * nW;
@@ -44,17 +56,18 @@ void convolution(OCTET *ImgIn, const std::vector<float> &filtre, OCTET *ImgOut,
 }
 
 int main(int argc, char *argv[]) {
-  char folder[100], folder2[100];
+  char folder[100], folder2[100], image_to_predict[100];
   int nH, nW, taille;
   std::vector<OCTET *> image_set;
 
-  if (argc != 3) {
-    printf("Usage: folder_class1 folder_class2 \n");
+  if (argc != 4) {
+    printf("Usage: folder_class1 folder_class2 image_to_predict\n");
     exit(EXIT_FAILURE);
   }
 
   sscanf(argv[1], "%s", folder);
   sscanf(argv[2], "%s", folder2);
+  sscanf(argv[3], "%s", image_to_predict);
 
   string path = folder;
   string path2 = folder2;
@@ -89,17 +102,11 @@ int main(int argc, char *argv[]) {
     lire_image_pgm(const_cast<char *>(db2[i].c_str()), image_set[i], taille);
   }
 
-  /*OCTET *ImgIn;
+  std::vector<float> filtre = {0, 1, 0, 1, 5, -1, 0, -1, 0};
 
-  lire_nb_lignes_colonnes_image_pgm(folder, &nH, &nW);
-  taille = nH * nW;
-
-  allocation_tableau(ImgIn, OCTET, taille);
-  lire_image_pgm(folder, ImgIn, taille);*/
-
-  std::vector<float> filtre = {0, -1, 0, -1, 4, -1, 0, -1, 0};
-
-  std::vector<float> filtre2 = {0, 1, 0, 1, -4, 1, 0, 1, 0};
+  std::vector<float> filtre2 = {0.5, 0.5, 0.5,
+			        -0.5, 1, 0.5,
+				-0.5, -0.5, -0.5};
 
   std::vector<float> filtre3 = {1, 1, 1, 1, 1, 1, 1, 1, 1};
 
@@ -107,7 +114,6 @@ int main(int argc, char *argv[]) {
 
   std::vector<float> filtre5 = {0.5, 1, 0.5, 0, 0, 0, -0.5, -1, -0.5};
 
-  // image_set.push_back(ImgIn);
   CNN cnn(2, 5, nW, nH, image_set);
   cnn.addFilter(filtre);
   cnn.addFilter(filtre2);
@@ -119,6 +125,16 @@ int main(int argc, char *argv[]) {
   cnn.setup_cnn();
   cnn.train();
 
-  // free(ImgIn);
+  OCTET *ImgIn;
+
+  lire_nb_lignes_colonnes_image_pgm(image_to_predict, &nH, &nW);
+  taille = nH * nW;
+
+  allocation_tableau(ImgIn, OCTET, taille);
+  lire_image_pgm(image_to_predict, ImgIn, taille);
+
+  cnn.predict(ImgIn, nH, nW);
+
+  free(ImgIn);
   return EXIT_SUCCESS;
 }
