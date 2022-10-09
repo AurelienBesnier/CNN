@@ -233,7 +233,7 @@ void planB(OCTET *pt_image, OCTET *src, int taille_image){
 /*===========================================================================*/   
 /*===========================================================================*/
 
-void ecrire_image_pgm(char  nom_image[], OCTET *pt_image, int nb_lignes, int nb_colonnes)
+void ecrire_image_pgm(char * nom_image, OCTET *pt_image, int nb_lignes, int nb_colonnes)
 {
    FILE *f_image;
    int taille_image = nb_colonnes * nb_lignes;
@@ -259,7 +259,7 @@ void ecrire_image_pgm(char  nom_image[], OCTET *pt_image, int nb_lignes, int nb_
 }
 /*===========================================================================*/
 
-void lire_nb_lignes_colonnes_image_pgm(char nom_image[], int *nb_lignes, int *nb_colonnes)
+void lire_nb_lignes_colonnes_image_pgm(char *nom_image, int *nb_lignes, int *nb_colonnes)
 {
    FILE *f_image;
    int max_grey_val;
@@ -284,7 +284,7 @@ void lire_nb_lignes_colonnes_image_pgm(char nom_image[], int *nb_lignes, int *nb
 }
 /*===========================================================================*/
 /*===========================================================================*/
-void lire_image_pgm(char  nom_image[], OCTET *pt_image, int taille_image)
+void lire_image_pgm(char * nom_image, OCTET *pt_image, int taille_image)
 {
    FILE *f_image;
    int  nb_colonnes, nb_lignes, max_grey_val;

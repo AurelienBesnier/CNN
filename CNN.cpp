@@ -1,11 +1,15 @@
 #include "image_ppm.h"
 #include <algorithm>
+#include <filesystem>
+#include <iostream>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <string>
 #include <vector>
+
+using namespace std;
 
 void relu(OCTET *ImgIn, int nH, int nW);
 void convolution(OCTET *ImgIn, const std::vector<float> &filtre, OCTET *ImgOut,
@@ -48,12 +52,6 @@ public:
         relu(filtered_input[i + j], nH, nW);
       }
     }
-
-    char filename[250];
-    for (int i = 0; i < filtered_input.size(); ++i) {
-      sprintf(filename, "conv_%d.pgm", i + 1);
-      ecrire_image_pgm(filename, filtered_input[i], nH, nW);
-    }
   }
 
   void max_pooling() {
@@ -81,11 +79,11 @@ public:
       }
       output_idx = 0;
     }
-    char filename[250];
+    /*char filename[250];
     for (int i = 0; i < output.size(); ++i) {
       sprintf(filename, "output_%d.pgm", i + 1);
       ecrire_image_pgm(filename, output[i], nH / 2, nW / 2);
-    }
+    }*/
   }
 
   void process() {
@@ -99,6 +97,7 @@ public:
 class FullyConnectedLayer {
 private:
   std::vector<OCTET *> input;
+  double* vect;
   OCTET *vectorized_input;
   int nH, nW;
 
@@ -111,20 +110,24 @@ public:
     this->nW = nW;
   }
 
-  void vectorise() {
+  void vectorise(char * vectorName) {
     size_t size = nH * nW;
     allocation_tableau(vectorized_input, OCTET, size);
+    allocation_tableau(vect, double, size);
     printf("nH=%d; nW=%d\n", nH, nW);
+    printf("input size = %d\n", input.size());
 
-    size_t vec_id = 0;
     for (size_t i = 0; i < input.size(); ++i) {
       for (size_t j = 0; j < size; ++j) {
-        vectorized_input[vec_id++] += input[i][j] / input.size();
+        vect[j] += (double)input[i][j] /(double) input.size();
       }
-      vec_id = 0;
     }
-
-    ecrire_image_pgm("vector.pgm", vectorized_input, nH, nW);
+    
+    for (size_t j = 0; j < size; ++j) {
+        vectorized_input[j]=vect[j];
+      }
+    
+    ecrire_image_pgm(vectorName,vectorized_input, nH, nW);
   }
 };
 
@@ -138,6 +141,8 @@ private:
 
   std::vector<LayerConvPool> layers;
   std::vector<OCTET *> inputs;
+  std::vector<OCTET *> class1;
+  std::vector<OCTET *> class2;
 
   FullyConnectedLayer outputLayer;
 
@@ -149,13 +154,21 @@ public:
       : n(n), h(h), nH(nH), nW(nW), inputs(input) {}
 
   void setup_cnn() {
+    for (size_t i = 0; i < inputs.size() / 2; ++i) {
+	class1.push_back(inputs[i]);
+    }
+    
+    for (size_t i = inputs.size()/2; i < inputs.size(); ++i) {
+	class2.push_back(inputs[i]);
+    }
+
     layers.resize(n);
     size_t i = 0;
     for (i = 0; i < layers.size(); i++) {
       layers[i].setup_layer(nH / (i + 1), nW / (i + 1), filtres);
     }
-    outputLayer.setup_outputLayer(nH / (layers.size() * 2),
-                                  nW / (layers.size() * 2));
+    outputLayer.setup_outputLayer(nH / (n * 2), nW / (n * 2));
+    
   }
 
   void addFilter(std::vector<float> &filtre) { filtres.push_back(filtre); }
@@ -173,14 +186,26 @@ public:
     size_t i = 0;
     for (i = 0; i < n; ++i) {
       if (i == 0)
-        layers[i].set_input(inputs);
+        layers[i].set_input(class1);
       else
         layers[i].set_input(layers[i - 1].output);
       layers[i].process();
     }
 
-    outputLayer.set_input(layers[i - 1].output);
-    outputLayer.vectorise();
+    outputLayer.set_input(layers[i-1].output);
+    outputLayer.vectorise("class1_vector.pgm");
+    
+    i = 0;
+    for (i = 0; i < n; ++i) {
+      if (i == 0)
+        layers[i].set_input(class2);
+      else
+        layers[i].set_input(layers[i - 1].output);
+      layers[i].process();
+    }
+
+    outputLayer.set_input(layers[i-1].output);
+    outputLayer.vectorise("class2_vector.pgm");
   }
 
   void predict(OCTET *img, int nH, int nW);
@@ -217,24 +242,58 @@ void convolution(OCTET *ImgIn, const std::vector<float> &filtre, OCTET *ImgOut,
 }
 
 int main(int argc, char *argv[]) {
-  char cNomImgLue[250], cNomImgEcrite[250];
+  char folder[100], folder2[100];
   int nH, nW, taille;
   std::vector<OCTET *> image_set;
 
   if (argc != 3) {
-    printf("Usage: folder ImageAClasser.pgm\n");
-    exit(1);
+    printf("Usage: folder_class1 folder_class2 \n");
+    exit(EXIT_FAILURE);
   }
 
-  sscanf(argv[1], "%s", cNomImgLue);
-  sscanf(argv[2], "%s", cNomImgEcrite);
-  OCTET *ImgIn;
+  sscanf(argv[1], "%s", folder);
+  sscanf(argv[2], "%s", folder2);
 
-  lire_nb_lignes_colonnes_image_pgm(cNomImgLue, &nH, &nW);
+  string path = folder;
+  string path2 = folder2;
+  std::vector<string> db1, db2;
+
+  for (const auto &entry : std::filesystem::directory_iterator(path)) {
+    db1.push_back(entry.path());
+  }
+
+  for (const auto &entry : std::filesystem::directory_iterator(path2)) {
+    db2.push_back(entry.path());
+  }
+
+  /*for(size_t i =0; i< db1.size(); ++i)
+    cout<<db1[i]<<endl;*/
+
+  size_t set_idx = 0;
+  image_set.resize(db1.size() + db2.size());
+  for (size_t i = 0; i < db1.size(); i++) {
+    lire_nb_lignes_colonnes_image_pgm(const_cast<char *>(db1[i].c_str()), &nH,
+                                      &nW);
+    taille = nH * nW;
+    allocation_tableau(image_set[set_idx++], OCTET, taille);
+    lire_image_pgm(const_cast<char *>(db1[i].c_str()), image_set[i], taille);
+  }
+
+  for (size_t i = 0; i < db2.size(); i++) {
+    lire_nb_lignes_colonnes_image_pgm(const_cast<char *>(db2[i].c_str()), &nH,
+                                      &nW);
+    taille = nH * nW;
+    allocation_tableau(image_set[set_idx++], OCTET, taille);
+    lire_image_pgm(const_cast<char *>(db2[i].c_str()), image_set[i], taille);
+  }
+
+  /*OCTET *ImgIn;
+
+  lire_nb_lignes_colonnes_image_pgm(folder, &nH, &nW);
   taille = nH * nW;
 
   allocation_tableau(ImgIn, OCTET, taille);
-  lire_image_pgm(cNomImgLue, ImgIn, taille);
+  lire_image_pgm(folder, ImgIn, taille);*/
 
   std::vector<float> filtre = {0, -1, 0, -1, 4, -1, 0, -1, 0};
 
@@ -246,7 +305,7 @@ int main(int argc, char *argv[]) {
 
   std::vector<float> filtre5 = {0.5, 1, 0.5, 0, 0, 0, -0.5, -1, -0.5};
 
-  image_set.push_back(ImgIn);
+  // image_set.push_back(ImgIn);
   CNN cnn(2, 5, nW, nH, image_set);
   cnn.addFilter(filtre);
   cnn.addFilter(filtre2);
@@ -258,6 +317,6 @@ int main(int argc, char *argv[]) {
   cnn.setup_cnn();
   cnn.train();
 
-  free(ImgIn);
-  return 1;
+  // free(ImgIn);
+  return EXIT_SUCCESS;
 }
