@@ -102,11 +102,9 @@ int main(int argc, char *argv[]) {
     lire_image_pgm(const_cast<char *>(db2[i].c_str()), image_set[i], taille);
   }
 
-  std::vector<float> filtre = {0, 1, 0, 1, 5, -1, 0, -1, 0};
+  std::vector<float> filtre = {0, -1, 0, -1, 5, -1, 0, -1, 0};
 
-  std::vector<float> filtre2 = {0.5, 0.5, 0.5,
-			        -0.5, 1, 0.5,
-				-0.5, -0.5, -0.5};
+  std::vector<float> filtre2 = {0.5, 0.5, 0.5, -0.5, 1, 0.5, -0.5, -0.5, -0.5};
 
   std::vector<float> filtre3 = {1, 1, 1, 1, 1, 1, 1, 1, 1};
 
@@ -134,7 +132,7 @@ int main(int argc, char *argv[]) {
   lire_image_pgm(image_to_predict, ImgIn, taille);
 
   cnn.predict(ImgIn, nH, nW);
-  
+
   cnn.predict_class2_test();
 
   free(ImgIn);
